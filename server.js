@@ -1,13 +1,10 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 
 app.use(express.json());
-
-// 静态文件托管
-const path = require('path');
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 后端逻辑
 const DEFAULT_TIME = 25 * 60;
 let totalSeconds = DEFAULT_TIME;
 let isRunning = false;
@@ -48,9 +45,9 @@ app.post('/api/reset', (req, res) => {
     res.json({ code: 1, msg: '重置成功' });
 });
 
-// 所有非 API 请求返回 index.html（让根路径也能访问）
-app.get('/*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'tomato.html'));
+// 根路径返回 index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 module.exports = app;
