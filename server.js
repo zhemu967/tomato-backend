@@ -49,7 +49,7 @@ app.post('/api/reset', (req, res) => {
 });
 
 // 所有非 API 请求返回 index.html（让根路径也能访问）
-app.get('*', (req, res) => {
+app.get('/*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'tomato.html'));
 });
 
