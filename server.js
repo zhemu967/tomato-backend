@@ -1,21 +1,18 @@
 const express = require('express');
-const cors = require('cors');
 const app = express();
 
-// 跨域 + JSON 解析
-app.use(cors());
 app.use(express.json());
 
-// ★ 新增：托管 public 文件夹下的静态文件（让前端页面能被访问）★
-app.use(express.static('public'));
+// 静态文件托管
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ===== 后端核心数据（内存存储）=====
+// 后端逻辑
 const DEFAULT_TIME = 25 * 60;
 let totalSeconds = DEFAULT_TIME;
 let isRunning = false;
 let countTimer = null;
 
-// ===== 接口 =====
 app.get('/api/time', (req, res) => {
     res.json({
         code: 1,
@@ -51,13 +48,9 @@ app.post('/api/reset', (req, res) => {
     res.json({ code: 1, msg: '重置成功' });
 });
 
-// ★ 导出 app（Vercel 需要）★
-module.exports = app;
+// 所有非 API 请求返回 index.html（让根路径也能访问）
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'tomato.html'));
+});
 
-// ★ 本地开发时启动（保留，方便你本地测试）★
-if (require.main === module) {
-    const port = process.env.PORT || 3000;
-    app.listen(port, () => {
-        console.log(`🍅 番茄钟后端服务已启动，端口 ${port}`);
-    });
-}
+module.exports = app;
