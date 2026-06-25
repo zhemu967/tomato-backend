@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极简番茄钟</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: #f8f8f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+        }
+        .timer-box {
+            font-size: 8rem;
+            font-weight: 300;
+            color: #222;
+        }
+        .btn-group {
+            display: flex;
+            gap: 16px;
+        }
+        button {
+            border: none;
+            padding: 14px 32px;
+            font-size: 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        #startBtn { background: #ff5a5a; color: white; }
+        #pauseBtn { background: #ffbc34; color: #222; }
+        #resetBtn { background: #ddd; color: #222; }
+        button:active { scale: 0.95; }
+        .server-log {
+            width: 420px;
+            height: 140px;
+            background: #222;
+            color: #4cd964;
+            padding: 12px;
+            border-radius: 8px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-box" id="timeText">25:00</div>
+    <div class="btn-group">
+        <button id="startBtn">开始</button>
+        <button id="pauseBtn">暂停</button>
+        <button id="resetBtn">重置</button>
+    </div>
+    <div class="server-log" id="logPanel">【前端已启动】等待连接后端服务...\n</div>
+
+<script>
+const BASE_URL = '/api';
+const timeDom = document.getElementById('timeText');
+const logDom = document.getElementById('logPanel');
+let pollTimer = null; // 前端轮询定时器
+
+// 日志打印
+function addLog(msg) {
+    const now = new Date().toLocaleTimeString();
+    logDom.innerHTML += `[${now}] ${msg}\n`;
+    logDom.scrollTop = logDom.scrollHeight;
+}
+
+// 格式化时间
+function formatTime(s) {
+    const m = Math.floor(s / 60).toString().padStart(2, '0');
+    const sec = (s % 60).toString().padStart(2, '0');
+    return `${m}:${sec}`;
+}
+
+// 封装请求函数
+async function request(path, method = 'GET') {
+    try {
+        addLog(`请求 ${method} ${path}`);
+        const res = await fetch(BASE_URL + path, { method });
+        const data = await res.json();
+        addLog(`响应：${data.msg}`);
+        return data;
+    } catch (e) {
+        addLog(`请求失败：请检查后端服务是否启动`);
+    }
+}
+
+// 轮询获取最新时间
+function startPoll() {
+    stopPoll();
+    pollTimer = setInterval(async () => {
+        const res = await request('/time');
+        if (res?.code === 1) {
+            timeDom.innerText = formatTime(res.data.seconds);
+            // 计时到0自动停止轮询
+            if (res.data.seconds === 0) {
+                stopPoll();
+                alert('番茄时间结束！休息一下吧');
+            }
+        }
+    }, 1000);
+}
+
+function stopPoll() {
+    if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+    }
+}
+
+// 绑定按钮事件
+document.getElementById('startBtn').addEventListener('click', async () => {
+    const res = await request('/start', 'POST');
+    if (res?.code === 1) startPoll();
+});
+
+document.getElementById('pauseBtn').addEventListener('click', async () => {
+    const res = await request('/pause', 'POST');
+    if (res?.code === 1) stopPoll();
+});
+
+document.getElementById('resetBtn').addEventListener('click', async () => {
+    const res = await request('/reset', 'POST');
+    if (res?.code === 1) {
+        stopPoll();
+        const timeRes = await request('/time');
+        timeDom.innerText = formatTime(timeRes.data.seconds);
+    }
+});
+
+// 页面初始化
+window.onload = async () => {
+    const res = await request('/time');
+    if (res?.code === 1) {
+        timeDom.innerText = formatTime(res.data.seconds);
+        addLog('后端连接成功');
+    }
+};
+</script>
+</body>
+</html>
